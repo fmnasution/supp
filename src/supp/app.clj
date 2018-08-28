@@ -43,8 +43,8 @@
 ;; ================================================================
 
 (defprotocol IAppClient
-  (-reset-token [this username])
-  (-reset-password [this token username password]))
+  (-reset-token [this username option])
+  (-reset-password [this token username password option]))
 
 ;; ================================================================
 ;; token
@@ -66,8 +66,8 @@
 
 (defrecord SHAAppClient [host-url content-type secret size]
   IAppClient
-  (-reset-token [this username]
-    (let [resp-chan (a/chan)]
+  (-reset-token [this username {:keys [chan]}]
+    (let [resp-chan (or chan (a/chan))]
       (jx/POST (url/reset-token-url host-url username)
                (-> {}
                    (opt/specify-format content-type)
@@ -75,8 +75,8 @@
                    (opt/inject-forget-token
                     (forget-token username secret (sha-kind size)))))
       resp-chan))
-  (-reset-password [this token username password]
-    (let [resp-chan (a/chan)]
+  (-reset-password [this token username password {:keys [chan]}]
+    (let [resp-chan (or chan (a/chan))]
       (jx/PUT (url/target-user-url host-url username)
               (-> {}
                   (opt/specify-format content-type)
@@ -112,8 +112,8 @@
       (assoc this :public-key nil)))
 
   IAppClient
-  (-reset-token [this username]
-    (let [resp-chan (a/chan)]
+  (-reset-token [this username {:keys [chan]}]
+    (let [resp-chan (or chan (a/chan))]
       (jx/POST (url/reset-token-url host-url username)
                (-> {}
                    (opt/specify-format content-type)
@@ -121,8 +121,8 @@
                    (opt/inject-forget-token
                     (forget-token username public-key algorithm))))
       resp-chan))
-  (-reset-password [this token username password]
-    (let [resp-chan (a/chan)]
+  (-reset-password [this token username password {:keys [chan]}]
+    (let [resp-chan (or chan (a/chan))]
       (jx/PUT (url/target-user-url host-url username)
               (-> {}
                   (opt/specify-format content-type)
@@ -138,9 +138,13 @@
       (map->AsymetricAppClient)))
 
 (defn reset-token
-  [app-client username]
-  (-reset-token app-client username))
+  ([app-client username option]
+   (-reset-token app-client username option))
+  ([app-client username]
+   (reset-token app-client username {})))
 
 (defn reset-password
-  [app-client token username password]
-  (-reset-password app-client token username password))
+  ([app-client token username password option]
+   (-reset-password app-client token username password option))
+  ([app-client token username password]
+   (reset-password app-client token username password {})))

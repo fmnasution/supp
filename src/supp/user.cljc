@@ -13,10 +13,10 @@
 ;; ================================================================
 
 (defprotocol IUserClient
-  (-register [this username password])
-  (-erase [this username password])
-  (-authenticate [this credentials])
-  (-reset-password [this username password]))
+  (-register [this username password option])
+  (-erase [this username password option])
+  (-authenticate [this credentials option])
+  (-reset-password [this username password option]))
 
 ;; ================================================================
 ;; user client
@@ -24,8 +24,8 @@
 
 (defrecord UserClient [host-url content-type]
   IUserClient
-  (-register [this username password]
-    (let [resp-chan (a/chan)]
+  (-register [this username password {:keys [chan]}]
+    (let [resp-chan (or chan (a/chan))]
       (jx/POST (url/register-url host-url)
                (-> {}
                    (opt/specify-format content-type)
@@ -33,24 +33,24 @@
                                    :password password})
                    (opt/attach-callback resp-chan)))
       resp-chan))
-  (-erase [this username password]
-    (let [resp-chan (a/chan)]
+  (-erase [this username password {:keys [chan]}]
+    (let [resp-chan (or chan (a/chan))]
       (jx/DELETE (url/target-user-url host-url username)
                  (-> {}
                      (opt/specify-format content-type)
                      (opt/inject-http-basic-auth username password)
                      (opt/attach-callback resp-chan)))
       resp-chan))
-  (-authenticate [this {:keys [username] :as credentials}]
-    (let [resp-chan (a/chan)]
+  (-authenticate [this {:keys [username] :as credentials} {:keys [chan]}]
+    (let [resp-chan (or chan (a/chan))]
       (jx/POST (url/target-user-url host-url username)
                (-> {}
                    (opt/specify-format content-type)
                    (assoc :params credentials)
                    (opt/attach-callback resp-chan)))
       resp-chan))
-  (-reset-password [this username password]
-    (let [resp-chan (a/chan)]
+  (-reset-password [this username password {:keys [chan]}]
+    (let [resp-chan (or chan (a/chan))]
       (jx/PUT (url/target-user-url host-url username)
               (-> {}
                   (opt/specify-format content-type)
@@ -66,17 +66,25 @@
       (map->UserClient)))
 
 (defn register
-  [user-client username password]
-  (-register user-client username password))
+  ([user-client username password option]
+   (-register user-client username password option))
+  ([user-client username password]
+   (register user-client username password {})))
 
 (defn erase
-  [user-client username password]
-  (-erase user-client username password))
+  ([user-client username password option]
+   (-erase user-client username password option))
+  ([user-client username password]
+   (erase user-client username password {})))
 
 (defn authenticate
-  [user-client credentials]
-  (-authenticate user-client credentials))
+  ([user-client credentials option]
+   (-authenticate user-client credentials option))
+  ([user-client credentials]
+   (authenticate user-client credentials {})))
 
 (defn reset-password
-  [user-client username password]
-  (-reset-password user-client username password))
+  ([user-client username password option]
+   (-reset-password user-client username password option))
+  ([user-client username password]
+   (reset-password user-client username password {})))
