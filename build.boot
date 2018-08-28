@@ -11,10 +11,28 @@
                  ;; ---- cljs ----
                  [org.clojure/clojurescript "1.10.339"]
                  ;; ---- dev ----
-                 [samestep/boot-refresh "0.1.0" :scope "test"]])
+                 [samestep/boot-refresh "0.1.0" :scope "test"]
+                 [adzerk/bootlaces "0.1.13" :scope "test"]])
 
 (require
- '[samestep.boot-refresh :refer [refresh]])
+ '[samestep.boot-refresh :refer [refresh]]
+ '[adzerk.bootlaces :refer [bootlaces! build-jar push-snapshot push-release]])
+
+(def +version+
+  "0.1.0-SNAPSHOT")
+
+(bootlaces! +version+)
+
+(task-options!
+ push {:ensure-branch nil
+       :repo-map      {:checksum :warn}}
+ pom  {:project     'supp
+       :version     +version+
+       :description "Client for obs"
+       :url         "http://github.com/fmnasution/supp"
+       :scm         {:url "http://github.com/fmnasution/supp"}
+       :license     {"Eclipse Public License"
+                     "http://www.eclipse.org/legal/epl-v10.html"}})
 
 (deftask dev-repl
   []
@@ -22,3 +40,9 @@
    (repl :server true)
    (watch)
    (refresh)))
+
+(deftask snapshot-to-clojars
+  []
+  (comp
+   (build-jar)
+   (push-snapshot)))
