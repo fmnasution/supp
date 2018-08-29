@@ -44,7 +44,9 @@
 
 (defprotocol IAppClient
   (-reset-token [this username option])
-  (-reset-password [this token username password option]))
+  (-reset-password [this token username password option])
+  (-secret-key [this])
+  (-algorithm [this]))
 
 ;; ================================================================
 ;; token
@@ -83,7 +85,11 @@
                   (opt/attach-callback resp-chan)
                   (assoc :params {:password password})
                   (opt/inject-reset-token token)))
-      resp-chan)))
+      resp-chan))
+  (-secret-key [this]
+    secret)
+  (-algorithm [this]
+    (sha-kind size)))
 
 (defn make-sha-app-client
   [config]
@@ -129,7 +135,11 @@
                   (opt/attach-callback resp-chan)
                   (assoc :params {:password password})
                   (opt/inject-reset-token token)))
-      resp-chan)))
+      resp-chan))
+  (-secret-key [this]
+    public-key)
+  (-algorithm [this]
+    algorithm))
 
 (defn make-asymetric-app-client
   [config]
@@ -148,3 +158,11 @@
    (-reset-password app-client token username password option))
   ([app-client token username password]
    (reset-password app-client token username password {})))
+
+(defn secret-key
+  [app-client]
+  (-secret-key app-client))
+
+(defn algorithm
+  [app-client]
+  (-algorithm app-client))
